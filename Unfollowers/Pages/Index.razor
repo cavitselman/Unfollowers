@@ -1,0 +1,255 @@
+﻿@page "/"
+@using System.IO
+@using Microsoft.AspNetCore.Components.Forms
+@using HtmlAgilityPack
+
+<PageTitle>Instagram Takip Etmeyenleri Bul</PageTitle>
+
+<div class="d-flex flex-column min-vh-100">
+    <div class="container flex-grow-1">
+        <h1 class="text-center my-4">Instagram Takip Etmeyenleri Bul</h1>
+
+        <div class="alert alert-info text-center">
+            <p>İndirilen dosyadan çıkan <code>following.html</code> ve <code>followers.html</code> dosyalarını aşağıdaki alana yükleyerek takibi bırakanları görebilirsiniz. Detaylı anlatım için <NavLink href="/details">burayı tıklayın</NavLink>.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        Following Dosyasını Seçin
+                    </div>
+                    <div class="card-body">
+                        <label class="custom-file-upload">
+                            <InputFile id="followingFile" OnChange="HandleFollowingFileSelected" class="form-control" />
+                            <span>Dosya Seç</span>
+                        </label>
+                        @if (!string.IsNullOrEmpty(followingFileName))
+                        {
+                            <div class="mt-2">Seçilen Dosya: @followingFileName</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        Followers Dosyasını Seçin
+                    </div>
+                    <div class="card-body">
+                        <label class="custom-file-upload">
+                            <InputFile id="followersFile" OnChange="HandleFollowersFileSelected" class="form-control" />
+                            <span>Dosya Seç</span>
+                        </label>
+                        @if (!string.IsNullOrEmpty(followersFileName))
+                        {
+                            <div class="mt-2">Seçilen Dosya: @followersFileName</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <button style="width:20%" class="btn btn-danger mt-3" @onclick="UploadFiles">Dosyaları Yükle</button>
+        </div>
+
+        <br />
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <h3>
+                    Takip Edilenler @if (followingList.Any())
+                    {
+                        <span>(@followingList.Count)</span>
+                    }
+                </h3>
+                @if (followingList != null && followingList.Any())
+                {
+                    <div class="list-box">
+                        <ul class="list-group">
+                            @foreach (var username in followingList)
+                            {
+                                <li class="list-group-item">
+                                    <a href="https://www.instagram.com/@username/" target="_blank">@username</a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <p>Takip edilen kullanıcı bulunamadı.</p>
+                }
+            </div>
+            <div class="col-md-6">
+                <h3>
+                    Takipçiler @if (followersList.Any())
+                    {
+                        <span>(@followersList.Count)</span>
+                    }
+                </h3>
+                @if (followersList != null && followersList.Any())
+                {
+                    <div class="list-box">
+                        <ul class="list-group">
+                            @foreach (var username in followersList)
+                            {
+                                <li class="list-group-item">
+                                    <a href="https://www.instagram.com/@username/" target="_blank">@username</a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <p>Takipçi bulunamadı.</p>
+                }
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h3>
+                Takip Etmeyenler @if (notFollowingBack.Any())
+                {
+                    <span>(@notFollowingBack.Count)</span>
+                }
+            </h3>
+            @if (notFollowingBack != null && notFollowingBack.Any())
+            {
+                <div class="list-box">
+                    <ul class="list-group">
+                        @foreach (var username in notFollowingBack)
+                        {
+                            <li class="list-group-item">
+                                <a href="https://www.instagram.com/@username/" target="_blank">@username</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <p>Takip etmeyen kullanıcı bulunamadı.</p>
+            }
+        </div>
+    </div>
+
+    <footer class="mt-auto py-3 bg-light text-center w-100">
+        <div class="container" style="text-align:center">
+            &copy; Cavit Selman 2024 - Unfollowers - Tüm Hakları Saklıdır.
+        </div>
+    </footer>
+</div>
+
+<style>
+    .list-box {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    footer {
+        position: relative;
+        bottom: 0;
+        width: 100%;
+    }
+
+    .custom-file-upload {
+        display: inline-block;
+        position: relative;
+        cursor: pointer;
+        color: #007bff;
+    }
+
+        .custom-file-upload input[type="file"] {
+            display: none;
+        }
+
+        .custom-file-upload span {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            background-color: #f8f9fa;
+        }
+
+            .custom-file-upload span:hover {
+                background-color: #e2e6ea;
+            }
+</style>
+
+@code {
+    private List<string> followingList = new List<string>();
+    private List<string> followersList = new List<string>();
+    private List<string> notFollowingBack = new List<string>();
+    private IBrowserFile followingFile;
+    private IBrowserFile followersFile;
+    private string followingFileName;
+    private string followersFileName;
+    private const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
+
+    private void HandleFollowingFileSelected(InputFileChangeEventArgs e)
+    {
+        followingFile = e.File;
+        followingFileName = followingFile.Name;
+    }
+
+    private void HandleFollowersFileSelected(InputFileChangeEventArgs e)
+    {
+        followersFile = e.File;
+        followersFileName = followersFile.Name;
+    }
+
+    private async Task UploadFiles()
+    {
+        if (followingFile != null)
+        {
+            var followingContent = await ReadFileContentAsync(followingFile);
+            followingList = GetUsernamesFromHtml(followingContent);
+        }
+
+        if (followersFile != null)
+        {
+            var followersContent = await ReadFileContentAsync(followersFile);
+            followersList = GetUsernamesFromHtml(followersContent);
+        }
+
+        notFollowingBack = followingList.Except(followersList).ToList();
+    }
+
+    private async Task<string> ReadFileContentAsync(IBrowserFile file)
+    {
+        using (var stream = file.OpenReadStream(MaxFileSize))
+        using (var reader = new StreamReader(stream))
+        {
+            return await reader.ReadToEndAsync();
+        }
+    }
+
+    private List<string> GetUsernamesFromHtml(string htmlContent)
+    {
+        var usernames = new List<string>();
+        var htmlDoc = new HtmlDocument();
+        htmlDoc.LoadHtml(htmlContent);
+
+        var nodes = htmlDoc.DocumentNode.SelectNodes("//a[contains(@href, 'https://www.instagram.com/')]");
+
+        if (nodes != null)
+        {
+            foreach (var node in nodes)
+            {
+                string username = node.GetAttributeValue("href", "").Replace("https://www.instagram.com/", "").Trim('/');
+                if (!string.IsNullOrEmpty(username))
+                {
+                    usernames.Add(username);
+                }
+            }
+        }
+        return usernames;
+    }
+}
+
+
+
+
+
