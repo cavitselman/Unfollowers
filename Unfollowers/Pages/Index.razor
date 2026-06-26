@@ -238,7 +238,15 @@
         {
             foreach (var node in nodes)
             {
+                // Remove the main domain and leading/trailing slashes from the URL.
                 string username = node.GetAttributeValue("href", "").Replace("https://www.instagram.com/", "").Trim('/');
+
+                // NEWLY ADDED PART: Remove the "_u/" prefix added by Instagram.
+                if (username.StartsWith("_u/"))
+                {
+                    username = username.Substring(3);
+                }
+
                 if (!string.IsNullOrEmpty(username))
                 {
                     usernames.Add(username);
